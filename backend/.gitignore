@@ -1,97 +1,41 @@
-# ======================================
-# Python
-# ======================================
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.so
-*.egg
-*.egg-info/
-dist/
-build/
-.eggs/
-*.manifest
-*.spec
+# Environment files. Only .env.example is tracked.
+.env
+.env.*
+!.env.example
 
-# ======================================
-# Virtual Environment
-# ======================================
+# Python
 .venv/
 venv/
 env/
-ENV/
-env.bak/
-venv.bak/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
 
-# ======================================
-# Django / Database
-# ======================================
+# Django
 *.sqlite3
-*.db
-*.db-journal
+media/
+staticfiles/
 
-# ======================================
-# Django Migrations (ignore compiled pyc, keep migration .py)
-*/migrations/__pycache__/
-*/migrations/*.pyc
-
-# ======================================
-# Static & Media (ignore collected & uploaded files)
-# ======================================
-/staticfiles/
-/static/
-/media/
-
-# ======================================
-# Logs & Runtime
-# ======================================
+# Logs
+logs/
 *.log
-*.pot
-*.mo
-*.pid
-*.seed
-*.coverage
-*.cover
-*.py,cover
-coverage.xml
-nosetests.xml
-test-results.xml
-htmlcov/
 
-# ======================================
-# IDE & Editors
-# ======================================
+# Test artefacts
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Ruff / mypy
+.ruff_cache/
+.mypy_cache/
+
+# IDE
 .vscode/
 .idea/
-*.sublime-project
-*.sublime-workspace
 
-# ======================================
-# OS Generated
-# ======================================
+# OS
 .DS_Store
 Thumbs.db
-desktop.ini
-
-# ======================================
-# Environment & Secrets
-# ======================================
-.env
-.env.*
-*.env
-*.ini
-*.cfg
-*.json
-*.yaml
-*.yml
-
-# ======================================
-# Docker
-# ======================================
-*.pid
-*.tar
-*.bak
-*.tmp
-*.swp
-docker-compose.override.yml

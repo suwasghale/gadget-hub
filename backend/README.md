@@ -83,22 +83,24 @@ apps/
 └── wishlist/           # Wishlist Management
 
 
-core/
-├── settings/           # Environment-specific configs
-├── middleware/         # Custom middlewares
-├── utils/              # Helpers & common utilities
-└── urls.py
-└── asgi.py
+config/                 # Django project package
+├── settings/
+│   ├── base.py         # Shared settings
+│   ├── dev.py          # Local development (manage.py default)
+│   └── prod.py         # Production (wsgi/asgi default)
+├── urls.py
+├── asgi.py
 └── wsgi.py
 
-media/
-├── uploads/           # uploads
+core/                   # Shared permissions, mixins, admin logging
 
-.env
+media/
+├── uploads/            # uploads
+
+.env.example
 .gitignore
 manage.py
-
-
+```
 
 This architecture follows a **modular monolith** pattern — each app can scale or be extracted into microservices later.
 
@@ -108,11 +110,14 @@ This architecture follows a **modular monolith** pattern — each app can scale 
 
 ### 1️⃣ Clone the Repository
 ```bash
-git clone https://github.com/suwasghale/drf-api.git### 2️⃣ Navigate to the Project Directory
-```bash
-cd drf-api
+git clone https://github.com/suwasghale/gadget-hub.git
+```
 
+### 2️⃣ Navigate to the Backend Directory
 ```bash
+cd gadget-hub/backend
+cp .env.example .env
+```
 
 2️⃣ Create & Activate Virtual Environment
 
@@ -195,7 +200,7 @@ Used for:
 
 Start Celery worker:
 
-celery -A core worker -l info
+celery -A config worker -l info
 
 🔒 Security Best Practices
 

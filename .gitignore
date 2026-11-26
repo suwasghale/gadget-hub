@@ -1,0 +1,29 @@
+# Environment files. Only the examples are tracked.
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Dependencies and build output
+**/.venv/
+**/venv/
+**/node_modules/
+**/.next/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+**/logs/
+**/*.tsbuildinfo
+
+# Credentials
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.env
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

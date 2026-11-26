@@ -1,5 +1,5 @@
 {
-  "name": "gadget_hub",
+  "name": "gadget-hub-frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
