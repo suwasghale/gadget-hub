@@ -38,7 +38,7 @@ const Header = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const updateQuantity = (itemId, change) => {
+  const updateQuantity = (itemId: string, change: number) => {
     setCartItems(prev => prev.map(item => 
       item.id === itemId 
         ? { ...item, quantity: Math.max(1, item.quantity + change) }
@@ -46,14 +46,14 @@ const Header = () => {
     ));
   };
 
-  const removeItem = (itemId) => {
+  const removeItem = (itemId: string) => {
     setCartItems(prev => prev.filter(item => item.id !== itemId));
   };
 
   const getTotalItems = () => cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const getTotalPrice = () => cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  const handleSearch = (e) => {
+  const handleSearch = () => {
     if (searchQuery.trim()) {
       alert(`Searching for: ${searchQuery}`);
     }
@@ -125,7 +125,7 @@ const Header = () => {
                   className="w-full pl-4 pr-12 py-3 rounded-full border-2 focus:border-red-600"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      handleSearch(e);
+                      handleSearch();
                     }
                   }}
                 />

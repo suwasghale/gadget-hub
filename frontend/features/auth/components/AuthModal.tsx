@@ -24,7 +24,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode }) =
         </button>
 
         {/* Auth Forms */}
-        <AuthForms initialMode={initialMode} />
+        <AuthForms initialMode={initialMode} onSuccess={onClose} />
       </div>
     </div>
   );

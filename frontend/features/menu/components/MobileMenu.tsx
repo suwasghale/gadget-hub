@@ -1,4 +1,5 @@
 "use client";
+import type { LucideIcon } from "lucide-react";
 import React, { useState } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import type { MenuItem, MenuData } from "../types/menu.types";
@@ -52,7 +53,8 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ menuData }) => {
         ) : (
           <div className="space-y-2">
             {Object.entries(menuData).map(([key, menu]) => {
-              const Icon = menu.icon;
+              // menuData always uses lucide icon components here.
+              const Icon = menu.icon as LucideIcon;
               return (
                 <button
                   key={key}

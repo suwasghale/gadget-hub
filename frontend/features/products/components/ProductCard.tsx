@@ -2,12 +2,14 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Heart, ShoppingCart, Clock, Eye, Star } from "lucide-react";
-import type { Product } from "@/features/products/types";
+import type { Product } from "@/features/products/types/product";
 
 const ProductCard = ({ product }: { product: Product }) => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const href = product.slug ? `/products/${product.slug}` : "/products";
 
   const formatPrice = (price: number) =>
     `₹ ${price.toLocaleString("en-IN")}.00`;
@@ -83,27 +85,29 @@ const ProductCard = ({ product }: { product: Product }) => {
         </button>
 
         {/* Next.js Optimized Image */}
-        <Image
-          src={product.image}
-          alt={product.name}
-          fill
-          sizes="(max-width: 768px) 100vw,
-                 (max-width: 1200px) 50vw,
-                 25vw"
-          className="object-cover p-4 transition-transform duration-300 group-hover:scale-105"
-          priority={product.isNew}
-        />
+        <Link href={href} aria-label={product.name} className="absolute inset-0">
+          <Image
+            src={product.image}
+            alt={product.name}
+            fill
+            sizes="(max-width: 768px) 100vw,
+                   (max-width: 1200px) 50vw,
+                   25vw"
+            className="object-cover p-4 transition-transform duration-300 group-hover:scale-105"
+            priority={product.isNew}
+          />
+        </Link>
       </div>
 
       {/* Product Details */}
       <div className="p-4 space-y-2">
         {/* Product Name */}
         <h3 className="text-sm font-medium text-gray-900 line-clamp-2 hover:text-red-600 transition-colors duration-300">
-          {product.name}
+          <Link href={href}>{product.name}</Link>
         </h3>
 
         {/* Rating */}
-        {product.rating && (
+        {product.rating ? (
           <div className="flex items-center space-x-1">
             {[...Array(5)].map((_, i) => (
               <Star
@@ -115,13 +119,13 @@ const ProductCard = ({ product }: { product: Product }) => {
                 }`}
               />
             ))}
-            {product.reviewCount && (
+            {product.reviewCount ? (
               <span className="text-xs text-gray-500">
                 ({product.reviewCount})
               </span>
-            )}
+            ) : null}
           </div>
-        )}
+        ) : null}
 
         {/* Pricing */}
         <div>

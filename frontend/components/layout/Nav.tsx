@@ -1,4 +1,5 @@
 "use client";
+import type { LucideIcon } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import MenuButton from "@/features/menu/components/MenuButton";
 import DesktopMenu from "@/features/menu/components/DesktopMenu";
@@ -33,7 +34,7 @@ const Nav: React.FC = () => {
                 >
                   <MenuButton
                     title={menu.title}
-                    icon={menu.icon as any}
+                    icon={menu.icon as LucideIcon}
                     color={menu.color}
                     isActive={activeMenu === key}
                   />

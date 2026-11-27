@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -27,12 +27,32 @@ interface FilterState {
   [key: string]: string[] | string | number[];
 }
 
-const ProductFilterSidebar = () => {
+/** Filters the backend supports (see ProductViewSet.get_queryset). */
+export interface AppliedProductFilters {
+  brands: string[];
+  minPrice?: number;
+  maxPrice?: number;
+}
+
+interface ProductFilterSidebarProps {
+  initial?: AppliedProductFilters;
+  onApply?: (filters: AppliedProductFilters) => void;
+}
+
+const ProductFilterSidebar = ({ initial, onApply }: ProductFilterSidebarProps = {}) => {
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [priceDraft, setPriceDraft] = useState({
+    min: initial?.minPrice?.toString() ?? '',
+    max: initial?.maxPrice?.toString() ?? '',
+  });
+  const [appliedPrice, setAppliedPrice] = useState<{ min?: number; max?: number }>({
+    min: initial?.minPrice,
+    max: initial?.maxPrice,
+  });
   const [searchTerms, setSearchTerms] = useState<{[key: string]: string}>({});
   const [filters, setFilters] = useState<FilterState>({
     price: [32999, 627900],
-    brands: [],
+    brands: initial?.brands ?? [],
     laptopSeries: [],
     laptopType: [],
     processorSeries: [],
@@ -314,9 +334,25 @@ const ProductFilterSidebar = () => {
     setFilters(prev => ({ ...prev, warranty }));
   };
 
-  const handlePriceChange = (min: number, max: number) => {
-    setFilters(prev => ({ ...prev, price: [min, max] }));
+  const applyPrice = () => {
+    const toNumber = (value: string) => {
+      const parsed = Number(value);
+      return value.trim() !== '' && Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+    };
+    setAppliedPrice({ min: toNumber(priceDraft.min), max: toNumber(priceDraft.max) });
   };
+
+  // Report brand / price changes to the page (not on first render).
+  const isFirstRender = useRef(true);
+  const brands = filters.brands as string[];
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    onApply?.({ brands, minPrice: appliedPrice.min, maxPrice: appliedPrice.max });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brands, appliedPrice]);
 
   const clearAllFilters = () => {
     setFilters({
@@ -342,6 +378,8 @@ const ProductFilterSidebar = () => {
       isNewArrival: []
     });
     setSearchTerms({});
+    setPriceDraft({ min: '', max: '' });
+    setAppliedPrice({});
   };
 
   const filteredOptions = (sectionId: string, options: FilterOption[]) => {
@@ -378,18 +416,29 @@ const ProductFilterSidebar = () => {
                 <div className="flex items-center space-x-3">
                   <input
                     type="number"
-                    value={32999}
+                    min={0}
+                    value={priceDraft.min}
+                    onChange={(e) => setPriceDraft(prev => ({ ...prev, min: e.target.value }))}
+                    onKeyDown={(e) => e.key === 'Enter' && applyPrice()}
+                    aria-label="Minimum price"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     placeholder="Min"
                   />
                   <span className="text-gray-500">—</span>
                   <input
                     type="number"
-                    value={627900}
+                    min={0}
+                    value={priceDraft.max}
+                    onChange={(e) => setPriceDraft(prev => ({ ...prev, max: e.target.value }))}
+                    onKeyDown={(e) => e.key === 'Enter' && applyPrice()}
+                    aria-label="Maximum price"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     placeholder="Max"
                   />
-                  <button className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200">
+                  <button
+                    type="button"
+                    onClick={applyPrice}
+                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200">
                     OK
                   </button>
                 </div>

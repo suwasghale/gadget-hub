@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -12,6 +11,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
@@ -21,6 +21,11 @@ from apps.users.utils.audit import log_user_activity
 
 User = get_user_model()
 token_generator = default_token_generator
+
+
+def build_verification_url(uid: str, token: str) -> str:
+    """Link to the frontend page that confirms the email through this API."""
+    return f"{settings.FRONTEND_URL.rstrip('/')}/verify-email?uid={uid}&token={token}"
 
 
 class AuthViewSet(viewsets.GenericViewSet):
@@ -62,9 +67,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = token_generator.make_token(user)
 
-        verification_url = request.build_absolute_uri(
-            reverse("users:verify-email") + f"?uid={uid}&token={token}"
-        )
+        verification_url = build_verification_url(uid, token)
         send_verification_email(user.email, user.username, verification_url)
         log_user_activity(user, "register", request=request)
 
@@ -110,9 +113,7 @@ class AuthViewSet(viewsets.GenericViewSet):
 
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = token_generator.make_token(user)
-            verification_url = request.build_absolute_uri(
-                reverse("users:verify-email") + f"?uid={uid}&token={token}"
-            )
+            verification_url = build_verification_url(uid, token)
             send_verification_email(user.email, user.username, verification_url)
             log_user_activity(user, "resend_verification", request=request)
         except User.DoesNotExist:
@@ -156,10 +157,15 @@ class AuthViewSet(viewsets.GenericViewSet):
         if not refresh:
             return Response({"message": "Refresh token required"}, status=400)
 
-        token = RefreshToken(refresh)
-        token.blacklist()
+        try:
+            RefreshToken(refresh).blacklist()
+        except TokenError:
+            # Already blacklisted, expired or malformed: the session is over
+            # either way, so logging out still succeeds.
+            pass
+        user = request.user  # logout() below replaces it with AnonymousUser
         logout(request)
-        log_user_activity(request.user, "logout", request=request)
+        log_user_activity(user, "logout", request=request)
 
         return Response({"message": "Logged out"})
 
@@ -169,6 +175,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         for token in OutstandingToken.objects.filter(user=request.user):
             BlacklistedToken.objects.get_or_create(token=token)
 
+        user = request.user  # logout() below replaces it with AnonymousUser
         logout(request)
-        log_user_activity(request.user, "logout_all", request=request)
+        log_user_activity(user, "logout_all", request=request)
         return Response({"message": "Logged out everywhere"})

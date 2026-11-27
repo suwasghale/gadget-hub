@@ -43,7 +43,9 @@ def log_user_activity(
     if user and action:
         UserActivityLog.objects.create(
             user = user,
-            action = action,
+            # The model field is action_type (choices such as "LOGIN");
+            # callers pass short names like "login" or "register".
+            action_type = str(action).upper().replace(" ", "_")[:50],
             timestamp = timezone.now(),
             ip_address = ip_address,
             user_agent = user_agent,

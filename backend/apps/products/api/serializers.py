@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from django.db.models import Avg
 from apps.products.models import Category, Product, ProductSpecification, Review
-from cloudinary.utils import cloudinary_url
 
 
 # ================================
@@ -34,11 +33,16 @@ class ProductSpecificationSerializer(serializers.ModelSerializer):
 # ================================
 class ReviewSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source="user.username", read_only=True)
+    # Write-only: POST /reviews/ {"product": "<product slug>", "rating": 5, ...}
+    product = serializers.SlugRelatedField(
+        slug_field="slug", queryset=Product.objects.all(), write_only=True
+    )
 
     class Meta:
         model = Review
         fields = [
             "id",
+            "product",
             "username",
             "rating",
             "comment",
@@ -47,6 +51,20 @@ class ReviewSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["created_at", "is_verified_purchase"]
+
+    def validate(self, attrs):
+        # The model allows one review per user per product; report it as a
+        # validation error instead of a database IntegrityError.
+        request = self.context.get("request")
+        product = attrs.get("product")
+        if (
+            self.instance is None
+            and request is not None
+            and product is not None
+            and Review.objects.filter(user=request.user, product=product).exists()
+        ):
+            raise serializers.ValidationError("You have already reviewed this product.")
+        return attrs
 
 
 # ================================
@@ -117,18 +135,22 @@ class ProductSerializer(serializers.ModelSerializer):
     # ================================
     # IMAGE URL HELPERS
     # ================================
+    # The storage backend builds the URL: Cloudinary when configured,
+    # otherwise MEDIA_URL on this server (made absolute for the frontend).
+    def _absolute_url(self, file_field):
+        if not file_field:
+            return None
+        url = file_field.url
+        request = self.context.get("request")
+        if request is not None and url.startswith("/"):
+            return request.build_absolute_uri(url)
+        return url
+
     def get_thumbnail_url(self, obj):
-        if obj.thumbnail:
-            url, _ = cloudinary_url(obj.thumbnail.name)
-            return url
-        return None
+        return self._absolute_url(obj.thumbnail)
 
     def get_gallery_urls(self, obj):
-        urls = []
-        for image in obj.gallery.all():
-            url, _ = cloudinary_url(image.image.name)
-            urls.append(url)
-        return urls
+        return [self._absolute_url(image.image) for image in obj.gallery.all()]
 
 
 class ProductReadSerializer(serializers.ModelSerializer):

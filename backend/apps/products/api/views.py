@@ -70,14 +70,14 @@ class ProductViewSet(viewsets.ModelViewSet):
     )
 
     # Filter / Search / Ordering config
-   filter_backends = [filters.SearchFilter, filters.OrderingFilter, filters.BaseFilterBackend]
+   filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
    search_fields = ["name", "sku", "brand", "description"]
    ordering_fields = ["price", "created_at", "stock", "review_count"]
    ordering = ["-created_at"]
 
+   # `brand` is handled in get_queryset (comma-separated, case-insensitive).
    filterset_fields = {
         "category__slug": ["exact"],
-        "brand": ["exact", "icontains"],
         "is_available": ["exact"],
         "price": ["gte", "lte"],
         "discount_percentage": ["gte"],
@@ -121,7 +121,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         in_stock = request.query_params.get("in_stock")
 
         if brand:
-            qs = qs.filter(brand__iexact=brand)
+            # ?brand=HP or ?brand=hp,dell (any of the listed brands)
+            brand_query = Q()
+            for name in (b.strip() for b in brand.split(",")):
+                if name:
+                    brand_query |= Q(brand__iexact=name)
+            qs = qs.filter(brand_query)
         if min_price:
             try:
                 qs = qs.filter(price__gte=float(min_price))
@@ -304,4 +309,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
         Attach logged-in user automatically.
         Prevent multiple reviews per product per user (handled at DB level).
         """
-        serializer.save(user=self.request.user)
+        review = serializer.save(user=self.request.user)
+        # Anonymous product pages are cached; show the new review right away.
+        cache.delete(f"product_detail:{review.product.slug}")
+        if hasattr(cache, "delete_pattern"):  # django-redis only
+            cache.delete_pattern("product_list:*")

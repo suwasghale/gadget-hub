@@ -105,6 +105,9 @@ REST_FRAMEWORK.update({
         "anon": "50/min",
         "user": "200/min",
         "login": "5/min",
+        "register": "5/hour",
+        "logout": "30/min",
+        "logout_all": "10/min",
         "email_verify": "3/min",
         "forgot_password": "3/min",
         "product_browse": "1000/day",
@@ -200,31 +203,54 @@ ASGI_APPLICATION = 'config.asgi.application'
 # }
 
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST', default='127.0.0.1'),
-        'PORT': env('DB_PORT', default='3307'),
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
-    }
-}
+# DB_ENGINE=mysql (default) uses the DB_* values below.
+# DB_ENGINE=sqlite uses backend/db.sqlite3 and needs no database server.
+DB_ENGINE = env('DB_ENGINE', default='mysql')
 
-# caching
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",  # Redis DB 1
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-        "TIMEOUT": 300,  # default 5 minutes
+if DB_ENGINE == 'sqlite':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': env('DB_NAME'),
+            'USER': env('DB_USER'),
+            'PASSWORD': env('DB_PASSWORD'),
+            'HOST': env('DB_HOST', default='127.0.0.1'),
+            'PORT': env('DB_PORT', default='3307'),
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
+    }
+
+# caching. Set REDIS_URL to use Redis; without it an in-process cache is used
+# (fine for one local runserver, not for multiple production workers).
+REDIS_URL = env('REDIS_URL', default='')
+
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+            "TIMEOUT": 300,  # default 5 minutes
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "TIMEOUT": 300,
+        }
+    }
 
 AUTHENTICATION_BACKENDS = [
     "apps.users.auth_backends.EmailOrUsernameBackend",
@@ -233,13 +259,18 @@ AUTHENTICATION_BACKENDS = [
 
 
 # email-smtp
-EMAIL_BACKEND = env('EMAIL_BACKEND')
-EMAIL_HOST = env ('EMAIL_HOST')
-EMAIL_HOST_USER = env('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
-EMAIL_PORT = env('EMAIL_PORT')
-EMAIL_USE_TLS = env('EMAIL_USE_TLS')
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
+EMAIL_BACKEND = env(
+    'EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend'
+)
+EMAIL_HOST = env('EMAIL_HOST', default='localhost')
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='no-reply@gadgethub.local')
+
+# Where the Next.js frontend runs. Used for links sent by email.
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -259,14 +290,29 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Cloudinary settings
+# Media storage. With all three CLOUDINARY_* values set, uploads go to
+# Cloudinary; otherwise they are saved under MEDIA_ROOT and served by Django
+# in development. (DEFAULT_FILE_STORAGE was removed in Django 5.1; STORAGES
+# is the setting Django actually reads.)
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY': env('CLOUDINARY_API_KEY'),
-    'API_SECRET': env('CLOUDINARY_API_SECRET'),
+    'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=''),
+    'API_KEY': env('CLOUDINARY_API_KEY', default=''),
+    'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
 }
+USE_CLOUDINARY = all(CLOUDINARY_STORAGE.values())
 
-DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+STORAGES = {
+    "default": {
+        "BACKEND": (
+            "cloudinary_storage.storage.MediaCloudinaryStorage"
+            if USE_CLOUDINARY
+            else "django.core.files.storage.FileSystemStorage"
+        ),
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
@@ -301,13 +347,13 @@ ESEWA_MERCHANT_ID = "EPAYTEST"  # Test merchant ID, replace in production
 # khalti
 # === Khalti Sandbox (use dev.khalti.com) ===
 KHALTI_IS_SANDBOX = True  # True = dev sandbox, False = live
-KHALTI_SECRET_KEY = env('KHALTI_SECRET_KEY')  # from Khalti sandbox docs
+KHALTI_SECRET_KEY = env('KHALTI_SECRET_KEY', default='')  # from Khalti sandbox docs
 KHALTI_RETURN_URL = "http://127.0.0.1:8000/payments/khalti/return/"
 KHALTI_WEBSITE_URL = "http://127.0.0.1:8000"
 
 # stripe
-STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY")
-STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY")
+STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="")
+STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY", default="")
 STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET", default=None)
 
 

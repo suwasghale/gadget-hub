@@ -16,13 +16,16 @@ cd backend
 python -m venv .venv
 .venv\Scripts\activate          # Windows; use `source .venv/bin/activate` on macOS/Linux
 pip install -r requirements.txt
-cp .env.example .env            # then fill in database, email and payment values
+cp .env.example .env            # set DB_ENGINE=sqlite to skip MySQL locally
 python manage.py migrate
+python manage.py seed_products  # optional: 8 demo laptops
 python manage.py createsuperuser
 python manage.py runserver
 ```
 
 `manage.py` uses `config.settings.dev`. `wsgi.py` and `asgi.py` use `config.settings.prod`, which requires `SECRET_KEY` and `ALLOWED_HOSTS` from the environment.
+
+Locally the backend needs no Redis, Cloudinary or payment keys: without `REDIS_URL` it uses an in-process cache, without Cloudinary credentials uploads are stored in `backend/media/`, and emails (such as the verification link) are printed in the `runserver` console.
 
 ### Frontend (http://localhost:3000)
 
@@ -40,6 +43,20 @@ npm run dev
 | Django admin | http://127.0.0.1:8000/admin/ |
 | API (v1) | http://127.0.0.1:8000/api/v1/ |
 | API documentation | http://127.0.0.1:8000/api/schema/swagger-ui/ |
+
+## How the frontend talks to the backend
+
+```text
+browser ──► Next.js (localhost:3000) ──► Django (API_INTERNAL_URL)
+            /api/proxy/<path>            /api/v1/<path>/
+            /api/auth/login | logout     /api/v1/auth/login|logout/
+```
+
+- **The browser only calls Next.js.** Client code uses `api()` from `frontend/lib/api/client.ts`, which goes to the same-origin `/api/proxy/*` route. Because of that, Django needs no CORS setup for the storefront, and `API_INTERNAL_URL` is never sent to the browser.
+- **Login tokens live in HttpOnly cookies.** `/api/auth/login` signs in against Django and stores the access and refresh tokens in `gh_access` and `gh_refresh`, which page JavaScript cannot read. The proxy adds `Authorization: Bearer ...` to each request. When the access token expires, the proxy refreshes it once and saves the new tokens. Requests that change data are rejected if they come from another site.
+- **Server components call Django directly** through `serverApi()` in `frontend/lib/api/server.ts`. The home page's featured products and the product detail page are built this way.
+- **Signed-in state** comes from `useAuth()` (`frontend/features/auth/AuthProvider.tsx`), which loads `profile/me/` once when the page opens.
+- **Sign-up** sends a verification email that links to `/verify-email` on the frontend. Users can sign in only after verifying.
 
 ## Structure
 

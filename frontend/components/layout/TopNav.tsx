@@ -11,6 +11,8 @@ interface NavTopProps {
   onCartClick?: () => void;
   onAccountClick?: () => void;
   onMenuToggle?: () => void;
+  /** Account dropdown items: signin, signup, profile, orders, wishlist, settings, logout. */
+  onAccountAction?: (action: string) => void;
   isLoggedIn?: boolean;
   userName?: string;
 }
@@ -21,6 +23,7 @@ const NavTop: React.FC<NavTopProps> = ({
   onCartClick,
   onAccountClick,
   onMenuToggle,
+  onAccountAction,
   isLoggedIn = false,
   userName = "John"
 }) => {
@@ -122,8 +125,7 @@ const NavTop: React.FC<NavTopProps> = ({
 
   const handleDropdownItemClick = (action: string) => {
     setIsAccountDropdownOpen(false);
-    // Handle different actions here
-    console.log('Action:', action);
+    onAccountAction?.(action);
   };
 
   const AccountDropdown = () => (

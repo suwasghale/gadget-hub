@@ -115,7 +115,15 @@ class Product(models.Model):
 
     @property
     def final_price(self):
-        """Get the price after discount."""
+        """
+        Get the price the customer pays.
+
+        When old_price is set, `price` is already the sale price and
+        discount_amount only reports the saving. A percentage discount
+        (without old_price) is taken off `price`.
+        """
+        if self.old_price and self.old_price > self.price:
+            return self.price
         return self.price - self.discount_amount
     
 # product specification model

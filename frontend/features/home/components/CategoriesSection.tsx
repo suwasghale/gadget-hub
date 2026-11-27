@@ -77,7 +77,7 @@ const Category: React.FC = () => {
                 {/* Icon Container */}
                 <div className="relative">
                   <div className="w-16 h-16 flex items-center justify-center text-gray-400 group-hover:text-red-600 transition-colors duration-300">
-                    {React.cloneElement(category.icon as React.ReactElement, {
+                    {React.cloneElement(category.icon as React.ReactElement<{ className?: string }>, {
                       className: "w-12 h-12 transition-all duration-300 group-hover:scale-110"
                     })}
                   </div>

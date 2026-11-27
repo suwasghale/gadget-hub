@@ -6,7 +6,7 @@ export function getPaginationRange(
   const half = Math.floor(maxVisible / 2);
 
   let start = Math.max(currentPage - half, 1);
-  let end = Math.min(start + maxVisible - 1, totalPages);
+  const end = Math.min(start + maxVisible - 1, totalPages);
 
   if (end - start + 1 < maxVisible) {
     start = Math.max(end - maxVisible + 1, 1);

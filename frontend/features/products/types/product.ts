@@ -1,6 +1,8 @@
 export interface Product {
   id: number;
+  slug?: string;
   name: string;
+  brand?: string | null;
   image: string;
   currentPrice: number;
   originalPrice: number;
